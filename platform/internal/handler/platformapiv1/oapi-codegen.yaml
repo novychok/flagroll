@@ -1,0 +1,6 @@
+package: platformapiv1
+generate:
+  chi-server: true
+  models: true
+  embedded-spec: true
+output: ../../../pkg/api/platform/v1/v1.gen.go

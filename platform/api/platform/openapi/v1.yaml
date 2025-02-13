@@ -1,0 +1,460 @@
+openapi: 3.0.3
+info:
+  title: Flagroll Platform API
+  description: Flagroll's Platform API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Base URL
+paths:
+  /feature-flags:
+    get:
+      operationId: listFeatureFlags
+      summary: Retrieve all feature flags
+      description: |
+        Fetch a list of all feature flags available in the system. 
+        This endpoint returns both enabled and disabled flags, allowing the client to determine 
+        which features should be activated or hidden based on the flag status.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: A list of feature flags retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagList"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createFeatureFlag
+      summary: Create a new feature flag
+      description: Allows users to create a new feature flag.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagRequest"
+      responses:
+        "201":
+          description: Feature flag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /feature-flags/{id}:
+    get:
+      operationId: getFeatureFlag
+      summary: Retrieve a specific feature flag by ID
+      description: |
+        Fetch details of a specific feature flag using its unique identifier.
+        This endpoint returns the flag's name, status (enabled/disabled), and other relevant metadata.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the feature flag
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Feature flag retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Feature flag not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteFeatureFlag
+      summary: Delete a specific feature flag by ID
+      description: |
+        Permanently removes a feature flag from the system using its unique identifier.
+        This action is irreversible and should be performed with caution.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the feature flag to delete
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Feature flag deleted successfully
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Feature flag not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: updateFeatureFlag
+      summary: Update a specific feature flag by ID
+      description: |
+        Updates an existing feature flag's properties, such as its name, status, or configuration.
+        This allows modifying feature flags without deleting and recreating them.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the feature flag to update
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagUpdateRequest"
+      responses:
+        "200":
+          description: Feature flag updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Feature flag not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateFeatureFlagToggle
+      summary: Toggle a feature flag on or off
+      description: |
+        Updates the status of a specific feature flag, enabling or disabling it.
+        This endpoint is useful for quickly turning features on or off without modifying other properties.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the feature flag to toggle
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagToggleRequest"
+      responses:
+        "200":
+          description: Feature flag toggle updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Feature flag not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    FeatureFlagToggleRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: boolean
+          description: Indicates if the feature flag should be enabled (true) or disabled (false)
+    FeatureFlagUpdateRequest:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+          description: The name of the feature flag
+        status:
+          type: boolean
+          description: Indicates if the feature flag is enabled (true) or disabled (false)
+        description:
+          type: string
+          description: An optional description of the feature flag
+    FeatureFlagList:
+      type: object
+      required:
+        - featureFlags
+        - total
+      properties:
+        workflows:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureFlag"
+        total:
+          type: integer
+    FeatureFlagResponse:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+          description: The name of the feature flag
+        status:
+          type: boolean
+          description: Whether the feature flag is enabled or disabled
+    FeatureFlagRequest:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+          description: The name of the feature flag
+        status:
+          type: boolean
+          description: Whether the feature flag is enabled or disabled
+        description:
+          type: string
+          description: A short description of the feature flag (optional)
+    FeatureFlag:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: The name of the feature flag
+        status:
+          type: boolean
+          description: Whether the feature flag is enabled or disabled
+        description:
+          type: string
+          description: A short description of the feature flag
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RegistrationRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - passwordConfirm
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        passwordConfirm:
+          type: string
+          format: password
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    Token:
+      type: object
+      required:
+        - token
+        - tokenExpiresAt
+        - refreshToken
+        - refreshTokenExpiresAt
+      properties:
+        token:
+          type: string
+        tokenExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+    Message:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
