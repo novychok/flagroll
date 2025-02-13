@@ -11,7 +11,7 @@ type App struct {
 }
 
 func (a *App) Start(ctx context.Context) error {
-	return nil
+	return a.platformAPIV1.Run(ctx)
 }
 
 func New(platformAPIV1 *platformapiv1.Server) *App {

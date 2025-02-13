@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httplog/v2"
 	"github.com/go-chi/render"
+	"github.com/novychok/flagroll/platform/internal/service"
 	platformapiv1 "github.com/novychok/flagroll/platform/pkg/api/platform/v1"
 	oapimiddleware "github.com/oapi-codegen/nethttp-middleware"
 )
@@ -28,6 +29,8 @@ type Config struct {
 type Server struct {
 	l   *slog.Logger
 	cfg *Config
+
+	authService service.Authorization
 
 	h platformapiv1.ServerInterface
 }
@@ -62,7 +65,7 @@ func (s *Server) Run(ctx context.Context) error {
 		MaxAge:           300,
 	}))
 	r.Use(middleware.Heartbeat("/health"))
-	// r.Use(ContextMiddleware())
+	r.Use(ContextMiddleware())
 
 	swagger, err := platformapiv1.GetSwagger()
 	if err != nil {
@@ -82,8 +85,8 @@ func (s *Server) Run(ctx context.Context) error {
 		},
 		Options: openapi3filter.Options{
 			AuthenticationFunc: func(ctx context.Context, input *openapi3filter.AuthenticationInput) error {
-				// ContextFromRequest(input.RequestValidationInput.Request).Set("authRequired",
-				// 	input.SecuritySchemeName == "cookieAuth")
+				ContextFromRequest(input.RequestValidationInput.Request).Set("authRequired",
+					input.SecuritySchemeName == "cookieAuth")
 				return nil
 			},
 			ExcludeRequestBody:    true,
@@ -95,7 +98,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	r.Use(oapimiddleware.OapiRequestValidatorWithOptions(swagger, &options))
 
-	// r.Use(s.auth)
+	r.Use(s.auth)
 
 	platformapiv1.HandlerFromMux(s.h, r)
 
@@ -118,11 +121,15 @@ func NewServer(
 	l *slog.Logger,
 	cfg *Config,
 
+	authService service.Authorization,
+
 	h platformapiv1.ServerInterface,
 ) *Server {
 	return &Server{
 		l:   l,
 		cfg: cfg,
+
+		authService: authService,
 
 		h: h,
 	}
