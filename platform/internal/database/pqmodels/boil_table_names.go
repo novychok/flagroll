@@ -4,7 +4,11 @@
 package pqmodels
 
 var TableNames = struct {
-	Users string
+	APIKeys      string
+	FeatureFlags string
+	Users        string
 }{
-	Users: "users",
+	APIKeys:      "api_keys",
+	FeatureFlags: "feature_flags",
+	Users:        "users",
 }

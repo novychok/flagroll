@@ -12,4 +12,5 @@ type Authorization interface {
 	Register(ctx context.Context, user *entity.UserCreate) (*entity.Token, error)
 	VerifyToken(ctx context.Context, verifyRequest *entity.VerifyToken) error
 	GetUserByToken(ctx context.Context, token string) (*entity.User, error)
+	GetUserByApiKey(ctx context.Context, apiKeyRaw string) (*entity.User, error)
 }

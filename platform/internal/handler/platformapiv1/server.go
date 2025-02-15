@@ -30,7 +30,7 @@ type Server struct {
 	l   *slog.Logger
 	cfg *Config
 
-	authService service.Authorization
+	authorizationService service.Authorization
 
 	h platformapiv1.ServerInterface
 }
@@ -56,7 +56,7 @@ func (s *Server) Run(ctx context.Context) error {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{
-			"http://localhost:8080",
+			"http://localhost:8010/",
 		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
@@ -85,8 +85,16 @@ func (s *Server) Run(ctx context.Context) error {
 		},
 		Options: openapi3filter.Options{
 			AuthenticationFunc: func(ctx context.Context, input *openapi3filter.AuthenticationInput) error {
-				ContextFromRequest(input.RequestValidationInput.Request).Set("authRequired",
-					input.SecuritySchemeName == "cookieAuth")
+				req := input.RequestValidationInput.Request
+				customCtx := ContextFromRequest(req)
+
+				switch input.SecuritySchemeName {
+				case "bearerAuth":
+					customCtx.Set("authRequired", true)
+				case "keyAuth":
+					customCtx.Set("apiKeyRequired", true)
+				}
+
 				return nil
 			},
 			ExcludeRequestBody:    true,
@@ -99,6 +107,7 @@ func (s *Server) Run(ctx context.Context) error {
 	r.Use(oapimiddleware.OapiRequestValidatorWithOptions(swagger, &options))
 
 	r.Use(s.auth)
+	r.Use(s.keyAuth)
 
 	platformapiv1.HandlerFromMux(s.h, r)
 
@@ -121,7 +130,7 @@ func NewServer(
 	l *slog.Logger,
 	cfg *Config,
 
-	authService service.Authorization,
+	authorizationService service.Authorization,
 
 	h platformapiv1.ServerInterface,
 ) *Server {
@@ -129,7 +138,7 @@ func NewServer(
 		l:   l,
 		cfg: cfg,
 
-		authService: authService,
+		authorizationService: authorizationService,
 
 		h: h,
 	}

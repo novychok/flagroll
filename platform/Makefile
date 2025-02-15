@@ -10,6 +10,7 @@ tools:
 	go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.2.0
 	go install go.uber.org/mock/mockgen@latest
 	go install github.com/google/wire/cmd/wire@latest
+	go install github.com/swaggo/swag/cmd/swag@latest
 
 .PHONY: migrate-new
 migrate-new:

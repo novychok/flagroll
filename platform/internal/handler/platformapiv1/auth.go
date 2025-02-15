@@ -14,6 +14,7 @@ func (s *Server) auth(h http.Handler) http.Handler {
 		_, exists := customCtx.Get("authRequired")
 		if !exists {
 			h.ServeHTTP(w, r.WithContext(r.Context()))
+
 			return
 		}
 
@@ -32,7 +33,7 @@ func (s *Server) auth(h http.Handler) http.Handler {
 				return
 			}
 
-			token, err := s.authService.RefreshToken(r.Context(), &entity.RefreshToken{
+			token, err := s.authorizationService.RefreshToken(r.Context(), &entity.RefreshToken{
 				Token: refreshTokenCookie.Value,
 			})
 			if err != nil {
@@ -52,9 +53,10 @@ func (s *Server) auth(h http.Handler) http.Handler {
 			tokenValue = tokenCookie.Value
 		}
 
-		user, err := s.authService.GetUserByToken(r.Context(), tokenValue)
+		user, err := s.authorizationService.GetUserByToken(r.Context(), tokenValue)
 		if err != nil {
 			h.ServeHTTP(w, r.WithContext(r.Context()))
+
 			return
 		}
 

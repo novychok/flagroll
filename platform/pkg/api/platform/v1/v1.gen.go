@@ -23,7 +23,21 @@ import (
 
 const (
 	BearerAuthScopes = "bearerAuth.Scopes"
+	KeyAuthScopes    = "keyAuth.Scopes"
 )
+
+// APIKeyCreate defines model for APIKeyCreate.
+type APIKeyCreate struct {
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+}
+
+// APIKeyResponse defines model for APIKeyResponse.
+type APIKeyResponse struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	ExpiresAt time.Time          `json:"expiresAt"`
+	Id        openapi_types.UUID `json:"id"`
+	RawToken  string             `json:"rawToken"`
+}
 
 // Error defines model for Error.
 type Error struct {
@@ -32,6 +46,8 @@ type Error struct {
 
 // FeatureFlag defines model for FeatureFlag.
 type FeatureFlag struct {
+	// Active Whether the feature flag is enabled or disabled
+	Active    bool      `json:"active"`
 	CreatedAt time.Time `json:"createdAt"`
 
 	// Description A short description of the feature flag
@@ -39,60 +55,101 @@ type FeatureFlag struct {
 	Id          openapi_types.UUID `json:"id"`
 
 	// Name The name of the feature flag
-	Name string `json:"name"`
-
-	// Status Whether the feature flag is enabled or disabled
-	Status    bool      `json:"status"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	Name      string             `json:"name"`
+	OwnerId   openapi_types.UUID `json:"ownerId"`
+	UpdatedAt time.Time          `json:"updatedAt"`
 }
 
-// FeatureFlagList defines model for FeatureFlagList.
-type FeatureFlagList struct {
-	Total     int            `json:"total"`
-	Workflows *[]FeatureFlag `json:"workflows,omitempty"`
-}
+// FeatureFlagCreateRequest defines model for FeatureFlagCreateRequest.
+type FeatureFlagCreateRequest struct {
+	// Active Whether the feature flag is enabled or disabled
+	Active bool `json:"active"`
 
-// FeatureFlagRequest defines model for FeatureFlagRequest.
-type FeatureFlagRequest struct {
 	// Description A short description of the feature flag (optional)
 	Description *string `json:"description,omitempty"`
 
 	// Name The name of the feature flag
 	Name string `json:"name"`
+}
 
-	// Status Whether the feature flag is enabled or disabled
-	Status bool `json:"status"`
+// FeatureFlagList defines model for FeatureFlagList.
+type FeatureFlagList struct {
+	FeatureFlags []FeatureFlag `json:"featureFlags"`
+	Total        int           `json:"total"`
 }
 
 // FeatureFlagResponse defines model for FeatureFlagResponse.
 type FeatureFlagResponse struct {
-	// Name The name of the feature flag
-	Name string `json:"name"`
+	// Active Whether the feature flag is enabled or disabled
+	Active bool `json:"active"`
 
-	// Status Whether the feature flag is enabled or disabled
-	Status bool `json:"status"`
+	// Description A short description of the feature flag
+	Description string `json:"description"`
+
+	// Name The name of the feature flag
+	Name    string             `json:"name"`
+	OwnerId openapi_types.UUID `json:"ownerId"`
 }
 
 // FeatureFlagToggleRequest defines model for FeatureFlagToggleRequest.
 type FeatureFlagToggleRequest struct {
-	// Status Indicates if the feature flag should be enabled (true) or disabled (false)
-	Status bool `json:"status"`
+	// Active Indicates if the feature flag should be enabled (true) or disabled (false)
+	Active bool `json:"active"`
 }
 
 // FeatureFlagUpdateRequest defines model for FeatureFlagUpdateRequest.
 type FeatureFlagUpdateRequest struct {
+	// Active Indicates if the feature flag is enabled (true) or disabled (false)
+	Active bool `json:"active"`
+
 	// Description An optional description of the feature flag
 	Description *string `json:"description,omitempty"`
 
 	// Name The name of the feature flag
 	Name string `json:"name"`
-
-	// Status Indicates if the feature flag is enabled (true) or disabled (false)
-	Status bool `json:"status"`
 }
 
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	Email    openapi_types.Email `json:"email"`
+	Password string              `json:"password"`
+}
+
+// Message defines model for Message.
+type Message struct {
+	Message string `json:"message"`
+}
+
+// RegistrationRequest defines model for RegistrationRequest.
+type RegistrationRequest struct {
+	Email           openapi_types.Email `json:"email"`
+	Name            string              `json:"name"`
+	Password        string              `json:"password"`
+	PasswordConfirm string              `json:"passwordConfirm"`
+}
+
+// Token defines model for Token.
+type Token struct {
+	RefreshToken          string    `json:"refreshToken"`
+	RefreshTokenExpiresAt time.Time `json:"refreshTokenExpiresAt"`
+	Token                 string    `json:"token"`
+	TokenExpiresAt        time.Time `json:"tokenExpiresAt"`
+}
+
+// User defines model for User.
+type User struct {
+	CreatedAt time.Time           `json:"createdAt"`
+	Email     openapi_types.Email `json:"email"`
+	Id        openapi_types.UUID  `json:"id"`
+	Name      string              `json:"name"`
+	UpdatedAt time.Time           `json:"updatedAt"`
+}
+
+// CreateAPIKeyJSONRequestBody defines body for CreateAPIKey for application/json ContentType.
+type CreateAPIKeyJSONRequestBody = APIKeyCreate
+
 // CreateFeatureFlagJSONRequestBody defines body for CreateFeatureFlag for application/json ContentType.
-type CreateFeatureFlagJSONRequestBody = FeatureFlagRequest
+type CreateFeatureFlagJSONRequestBody = FeatureFlagCreateRequest
 
 // UpdateFeatureFlagToggleJSONRequestBody defines body for UpdateFeatureFlagToggle for application/json ContentType.
 type UpdateFeatureFlagToggleJSONRequestBody = FeatureFlagToggleRequest
@@ -100,8 +157,23 @@ type UpdateFeatureFlagToggleJSONRequestBody = FeatureFlagToggleRequest
 // UpdateFeatureFlagJSONRequestBody defines body for UpdateFeatureFlag for application/json ContentType.
 type UpdateFeatureFlagJSONRequestBody = FeatureFlagUpdateRequest
 
+// LoginJSONRequestBody defines body for Login for application/json ContentType.
+type LoginJSONRequestBody = LoginRequest
+
+// RegisterJSONRequestBody defines body for Register for application/json ContentType.
+type RegisterJSONRequestBody = RegistrationRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Create API key
+	// (POST /api-keys)
+	CreateAPIKey(w http.ResponseWriter, r *http.Request)
+	// Retrieve User ID
+	// (GET /api-keys/user)
+	GetUserByAPIKey(w http.ResponseWriter, r *http.Request)
+	// Delete API key
+	// (DELETE /api-keys/{id})
+	DeleteAPIKey(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Retrieve all feature flags
 	// (GET /feature-flags)
 	ListFeatureFlags(w http.ResponseWriter, r *http.Request)
@@ -120,11 +192,38 @@ type ServerInterface interface {
 	// Update a specific feature flag by ID
 	// (PUT /feature-flags/{id})
 	UpdateFeatureFlag(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Retrieve a specific feature flag by User ID and Flag Name
+	// (GET /feature-flags/{userId}/{flagName})
+	GetFeatureFlagByUserAndName(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID, flagName string)
+	// Login
+	// (POST /login)
+	Login(w http.ResponseWriter, r *http.Request)
+	// Register
+	// (POST /register)
+	Register(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Create API key
+// (POST /api-keys)
+func (_ Unimplemented) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retrieve User ID
+// (GET /api-keys/user)
+func (_ Unimplemented) GetUserByAPIKey(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete API key
+// (DELETE /api-keys/{id})
+func (_ Unimplemented) DeleteAPIKey(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Retrieve all feature flags
 // (GET /feature-flags)
@@ -162,6 +261,24 @@ func (_ Unimplemented) UpdateFeatureFlag(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Retrieve a specific feature flag by User ID and Flag Name
+// (GET /feature-flags/{userId}/{flagName})
+func (_ Unimplemented) GetFeatureFlagByUserAndName(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID, flagName string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Login
+// (POST /login)
+func (_ Unimplemented) Login(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Register
+// (POST /register)
+func (_ Unimplemented) Register(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ServerInterfaceWrapper converts contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler            ServerInterface
@@ -170,6 +287,68 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// CreateAPIKey operation middleware
+func (siw *ServerInterfaceWrapper) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAPIKey(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetUserByAPIKey operation middleware
+func (siw *ServerInterfaceWrapper) GetUserByAPIKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, KeyAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserByAPIKey(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeleteAPIKey operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAPIKey(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // ListFeatureFlags operation middleware
 func (siw *ServerInterfaceWrapper) ListFeatureFlags(w http.ResponseWriter, r *http.Request) {
@@ -317,6 +496,73 @@ func (siw *ServerInterfaceWrapper) UpdateFeatureFlag(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// GetFeatureFlagByUserAndName operation middleware
+func (siw *ServerInterfaceWrapper) GetFeatureFlagByUserAndName(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", chi.URLParam(r, "userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "flagName" -------------
+	var flagName string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "flagName", chi.URLParam(r, "flagName"), &flagName, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "flagName", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, KeyAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFeatureFlagByUserAndName(w, r, userId, flagName)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// Login operation middleware
+func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Login(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// Register operation middleware
+func (siw *ServerInterfaceWrapper) Register(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Register(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -431,6 +677,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api-keys", wrapper.CreateAPIKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api-keys/user", wrapper.GetUserByAPIKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api-keys/{id}", wrapper.DeleteAPIKey)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/feature-flags", wrapper.ListFeatureFlags)
 	})
 	r.Group(func(r chi.Router) {
@@ -448,6 +703,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/feature-flags/{id}", wrapper.UpdateFeatureFlag)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/feature-flags/{userId}/{flagName}", wrapper.GetFeatureFlagByUserAndName)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/login", wrapper.Login)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/register", wrapper.Register)
+	})
 
 	return r
 }
@@ -455,30 +719,40 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

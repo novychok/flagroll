@@ -2,7 +2,10 @@ package authorization
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -26,7 +29,58 @@ type srv struct {
 	v *validator.Validate
 
 	userRepository   repository.User
+	apikeyRepository repository.APIKey
 	jwtSecretManager *jwts.SecretManager
+}
+
+const (
+	TokenPayloadSize = 60
+	ApiKeyRawPrefix  = "ser."
+)
+
+func (s *srv) GetUserByApiKey(ctx context.Context, apiKeyRaw string) (*entity.User, error) {
+	l := s.l.With(slog.String("method", "GetUserByApiKey"))
+
+	tokenWithoutPrefix := strings.TrimPrefix(apiKeyRaw, ApiKeyRawPrefix)
+	tkLengthWithNoPrefix := 128
+
+	if len(tokenWithoutPrefix) != tkLengthWithNoPrefix {
+		l.ErrorContext(ctx, "invalid token length", slog.Any("error", entity.ErrInvalidaTokenLength))
+
+		return nil, entity.ErrInvalidaTokenLength
+	}
+
+	encodedTokenID := tokenWithoutPrefix[:len(tokenWithoutPrefix)-80]
+
+	tokenID, err := base64.StdEncoding.DecodeString(encodedTokenID)
+	if err != nil {
+		l.ErrorContext(ctx, "decode toke id failed", slog.Any("error", err))
+
+		return nil, err
+	}
+
+	apiKey, err := s.apikeyRepository.GetByTokenID(ctx, string(tokenID))
+	if err != nil {
+		l.ErrorContext(ctx, "get by token id failed", slog.Any("error", err))
+
+		return nil, err
+	}
+
+	sha256Hash := sha256.Sum256([]byte(apiKeyRaw))
+	if err := bcrypt.CompareHashAndPassword([]byte(apiKey.TokenHash), sha256Hash[:]); err != nil {
+		l.ErrorContext(ctx, "compare hash failed", slog.Any("error", err))
+
+		return nil, entity.ErrInvalidTokenHash
+	}
+
+	user, err := s.userRepository.GetByID(ctx, entity.UserID(apiKey.OwnerID))
+	if err != nil {
+		l.Error("get user by id failed", slog.Any("error", err))
+
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *srv) GetUserByToken(ctx context.Context, token string) (*entity.User, error) {
@@ -249,6 +303,7 @@ func New(
 	v *validator.Validate,
 
 	userRepository repository.User,
+	apikeyRepository repository.APIKey,
 	jwtSecretManager *jwts.SecretManager,
 ) service.Authorization {
 	return &srv{
@@ -256,6 +311,7 @@ func New(
 		v: v,
 
 		userRepository:   userRepository,
+		apikeyRepository: apikeyRepository,
 		jwtSecretManager: jwtSecretManager,
 	}
 }

@@ -4,9 +4,93 @@ info:
   description: Flagroll's Platform API
   version: 1.0.0
 servers:
-  - url: http://localhost:8080
-    description: Base URL
+  - url: http://localhost:8010
+    description: Base URL for the Flagroll Platform API
 paths:
+  /api-keys/user:
+    get:
+      summary: Retrieve User ID
+      description: Retrieve the User ID associated with the provided API key in the header.
+      operationId: getUserByAPIKey
+      security:
+        - keyAuth: []
+      responses:
+        "200":
+          description: The User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /feature-flags/{userId}/{flagName}:
+    get:
+      operationId: getFeatureFlagByUserAndName
+      summary: Retrieve a specific feature flag by User ID and Flag Name
+      description: Fetch details of a specific feature flag using the User ID and Flag Name.
+      security:
+        - keyAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user
+          schema:
+            type: string
+            format: uuid
+        - name: flagName
+          in: path
+          required: true
+          description: The name of the feature flag
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Feature flag retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlagResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Feature flag not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /feature-flags:
     get:
       operationId: listFeatureFlags
@@ -53,7 +137,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FeatureFlagRequest"
+              $ref: "#/components/schemas/FeatureFlagCreateRequest"
       responses:
         "201":
           description: Feature flag created successfully
@@ -276,31 +360,234 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /api-keys:
+    post:
+      summary: Create API key
+      description: Create API key
+      operationId: createAPIKey
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/APIKeyCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api-keys/{id}:
+    delete:
+      summary: Delete API key
+      description: Delete an API key by its ID
+      operationId: deleteAPIKey
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the API key to delete
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: API key not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /login:
+    post:
+      summary: Login
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          headers:
+            Set-Cookie:
+              description: Set-Cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /register:
+    post:
+      summary: Register
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    keyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
   schemas:
+    APIKey:
+      type: object
+      required:
+        - id
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    APIKeyList:
+      type: object
+      required:
+        - apiKeys
+      properties:
+        apiKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/APIKey"
+    APIKeyCreate:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+    APIKeyResponse:
+      type: object
+      required:
+        - id
+        - rawToken
+        - createdAt
+        - expiresAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        rawToken:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
     FeatureFlagToggleRequest:
       type: object
       required:
-        - status
+        - active
       properties:
-        status:
+        active:
           type: boolean
           description: Indicates if the feature flag should be enabled (true) or disabled (false)
     FeatureFlagUpdateRequest:
       type: object
       required:
         - name
-        - status
+        - active
       properties:
         name:
           type: string
           description: The name of the feature flag
-        status:
+        active:
           type: boolean
           description: Indicates if the feature flag is enabled (true) or disabled (false)
         description:
@@ -312,7 +599,7 @@ components:
         - featureFlags
         - total
       properties:
-        workflows:
+        featureFlags:
           type: array
           items:
             $ref: "#/components/schemas/FeatureFlag"
@@ -321,25 +608,33 @@ components:
     FeatureFlagResponse:
       type: object
       required:
+        - ownerId
         - name
-        - status
+        - active
+        - description
       properties:
+        ownerId:
+          type: string
+          format: uuid
         name:
           type: string
           description: The name of the feature flag
-        status:
+        active:
           type: boolean
           description: Whether the feature flag is enabled or disabled
-    FeatureFlagRequest:
+        description:
+          type: string
+          description: A short description of the feature flag
+    FeatureFlagCreateRequest:
       type: object
       required:
         - name
-        - status
+        - active
       properties:
         name:
           type: string
           description: The name of the feature flag
-        status:
+        active:
           type: boolean
           description: Whether the feature flag is enabled or disabled
         description:
@@ -349,18 +644,22 @@ components:
       type: object
       required:
         - id
+        - ownerId
         - name
-        - status
+        - active
         - createdAt
         - updatedAt
       properties:
         id:
           type: string
           format: uuid
+        ownerId:
+          type: string
+          format: uuid
         name:
           type: string
           description: The name of the feature flag
-        status:
+        active:
           type: boolean
           description: Whether the feature flag is enabled or disabled
         description:
