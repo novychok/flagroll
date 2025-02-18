@@ -7,6 +7,26 @@ servers:
   - url: http://localhost:8010
     description: Base URL for the Flagroll Platform API
 paths:
+  /ws:
+    get:
+      summary: WebSocket connection
+      description: Establish a WebSocket connection for real-time updates.
+      operationId: websocketHandler
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api-keys/user:
     get:
       summary: Retrieve User ID
@@ -66,7 +86,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FeatureFlagResponse"
+                $ref: "#/components/schemas/FeatureFlag"
         "400":
           description: Bad request
           content:

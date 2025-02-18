@@ -3,9 +3,11 @@ package platformapiv1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -14,6 +16,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httplog/v2"
 	"github.com/go-chi/render"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/novychok/flagroll/platform/internal/service"
 	platformapiv1 "github.com/novychok/flagroll/platform/pkg/api/platform/v1"
 	oapimiddleware "github.com/oapi-codegen/nethttp-middleware"
@@ -32,7 +35,8 @@ type Server struct {
 
 	authorizationService service.Authorization
 
-	h platformapiv1.ServerInterface
+	h          platformapiv1.ServerInterface
+	natsClient jetstream.JetStream
 }
 
 func (s *Server) Run(ctx context.Context) error {
@@ -118,9 +122,64 @@ func (s *Server) Run(ctx context.Context) error {
 
 	s.l.Info("platform api server is running", slog.Int("port", s.cfg.Port))
 
+	if err := s.Start(); err != nil {
+		s.l.Error("nats server error", slog.Any("error", err))
+	}
+
 	err = srv.ListenAndServe()
 	if err != nil {
 		s.l.Error("platform server error", slog.Any("error", err))
+	}
+
+	return nil
+}
+
+func (s *Server) Start() error {
+
+	h, ok := s.h.(*handler)
+	if !ok {
+		return errors.New("invalid handler")
+	}
+
+	ctx := context.Background()
+	stream, err := s.natsClient.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:      "features",
+		Subjects:  []string{"features.>"},
+		Retention: jetstream.InterestPolicy,
+	})
+	if err != nil {
+		return err
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	consumer, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
+		Durable:   hostname,
+		AckPolicy: jetstream.AckExplicitPolicy,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = consumer.Consume(func(msg jetstream.Msg) {
+
+		switch msg.Subject() {
+		case "features.toggle.update":
+			if err := h.HandleMessagePub(ctx, msg.Data()); err != nil {
+				s.l.ErrorContext(ctx, "error to publish the message", slog.Any("error", err))
+			}
+		}
+
+		if err := msg.Ack(); err != nil {
+			s.l.ErrorContext(ctx, "error to acknowledge the message", slog.Any("error", err))
+		}
+
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -133,6 +192,7 @@ func NewServer(
 	authorizationService service.Authorization,
 
 	h platformapiv1.ServerInterface,
+	natsClient jetstream.JetStream,
 ) *Server {
 	return &Server{
 		l:   l,
@@ -140,6 +200,7 @@ func NewServer(
 
 		authorizationService: authorizationService,
 
-		h: h,
+		h:          h,
+		natsClient: natsClient,
 	}
 }

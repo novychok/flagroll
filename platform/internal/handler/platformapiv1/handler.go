@@ -2,10 +2,13 @@ package platformapiv1
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"sync"
 
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/novychok/flagroll/platform/internal/entity"
 	"github.com/novychok/flagroll/platform/internal/service"
 	platformapiv1 "github.com/novychok/flagroll/platform/pkg/api/platform/v1"
@@ -15,9 +18,14 @@ import (
 
 //go:generate oapi-codegen --config=./oapi-codegen.yaml ../../../api/platform/openapi/v1.yaml
 type handler struct {
+	mu sync.Mutex
+
+	connections map[string]*websocket.Conn
+
 	authorizationService service.Authorization
 	featureFlagService   service.FeatureFlag
 	apiKeyService        service.APIKeys
+	realtimeService      service.Realtime
 }
 
 const (
@@ -37,10 +45,13 @@ func (h *handler) GetFeatureFlagByUserAndName(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	rsp := platformapiv1.FeatureFlagResponse{
+	rsp := platformapiv1.FeatureFlag{
+		Id:          uuid.MustParse(featureFlag.ID.String()),
+		CreatedAt:   featureFlag.CreatedAt,
+		UpdatedAt:   featureFlag.UpdatedAt,
 		OwnerId:     uuid.MustParse(featureFlag.OwnerID.String()),
 		Name:        featureFlag.Name,
-		Description: featureFlag.Description,
+		Description: &featureFlag.Description,
 		Active:      featureFlag.Active,
 	}
 
@@ -358,10 +369,22 @@ func NewHandler(
 	authorizationService service.Authorization,
 	featureFlagService service.FeatureFlag,
 	apiKeyService service.APIKeys,
+	realtimeService service.Realtime,
 ) platformapiv1.ServerInterface {
-	return &handler{
+	handler := &handler{
+		connections: make(map[string]*websocket.Conn),
+
 		authorizationService: authorizationService,
 		featureFlagService:   featureFlagService,
 		apiKeyService:        apiKeyService,
+		realtimeService:      realtimeService,
 	}
+
+	go func() {
+		if err := handler.broadcastMessages(); err != nil {
+			log.Println(err)
+		}
+	}() // todo handle error and call it as handler listener
+
+	return handler
 }

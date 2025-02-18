@@ -10,6 +10,7 @@ import (
 	"github.com/novychok/flagroll/platform/internal/config"
 	"github.com/novychok/flagroll/platform/internal/handler/platformapiv1"
 	"github.com/novychok/flagroll/platform/internal/pkg/jwts"
+	"github.com/novychok/flagroll/platform/internal/pkg/nats"
 	"github.com/novychok/flagroll/platform/internal/pkg/postgres"
 	"github.com/novychok/flagroll/platform/internal/pkg/slog"
 	"github.com/novychok/flagroll/platform/internal/pkg/validator"
@@ -19,6 +20,7 @@ import (
 	"github.com/novychok/flagroll/platform/internal/service/apikeys"
 	"github.com/novychok/flagroll/platform/internal/service/authorization"
 	featureflag2 "github.com/novychok/flagroll/platform/internal/service/featureFlag"
+	"github.com/novychok/flagroll/platform/internal/service/realtime"
 )
 
 // Injectors from wire.go:
@@ -45,12 +47,20 @@ func Init() (*App, func(), error) {
 	}
 	serviceAuthorization := authorization.New(logger, validate, repositoryUser, apiKey, secretManager)
 	featureFlag := featureflag.NewPostgres(connection)
-	serviceFeatureFlag := featureflag2.New(logger, validate, featureFlag)
+	natsConfig := config.GetNats(configConfig)
+	jetStream, cleanup2, err := nats.New(natsConfig)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	serviceFeatureFlag := featureflag2.New(logger, validate, featureFlag, jetStream)
 	apiKeys := apikeys.New(logger, validate, apiKey)
-	serverInterface := platformapiv1.NewHandler(serviceAuthorization, serviceFeatureFlag, apiKeys)
-	server := platformapiv1.NewServer(logger, platformapiv1Config, serviceAuthorization, serverInterface)
-	app := New(server)
+	serviceRealtime := realtime.New()
+	serverInterface := platformapiv1.NewHandler(serviceAuthorization, serviceFeatureFlag, apiKeys, serviceRealtime)
+	server := platformapiv1.NewServer(logger, platformapiv1Config, serviceAuthorization, serverInterface, jetStream)
+	app := New(server, jetStream)
 	return app, func() {
+		cleanup2()
 		cleanup()
 	}, nil
 }

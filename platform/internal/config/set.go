@@ -7,4 +7,5 @@ var Set = wire.NewSet(
 	GetJWT,
 	GetPostgres,
 	GetPlatfromAPIV1,
+	GetNats,
 )

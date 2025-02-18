@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/novychok/flagroll/platform/internal/handler/platformapiv1"
+	"github.com/novychok/flagroll/platform/internal/pkg/nats"
 	"github.com/novychok/flagroll/platform/internal/pkg/postgres"
 	"github.com/spf13/viper"
 )
@@ -15,6 +16,7 @@ type JWT struct {
 }
 
 type Config struct {
+	Nats          nats.Config          `mapstructure:",squash"`
 	Postgres      postgres.Config      `mapstructure:",squash"`
 	PlatfromAPIV1 platformapiv1.Config `mapstructure:",squash"`
 	JWT           JWT                  `mapstructure:",squash"`
@@ -46,6 +48,10 @@ func New() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func GetNats(cfg *Config) *nats.Config {
+	return &cfg.Nats
 }
 
 func GetPostgres(cfg *Config) *postgres.Config {

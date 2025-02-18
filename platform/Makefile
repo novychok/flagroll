@@ -5,6 +5,10 @@ gen:
 	go generate ./...
 	sqlboiler -c ./sqlboiler.pq.toml psql
 
+.PHONY: infra
+infra:
+	docker compose -p $(PROJECT_NAME) up -d
+
 .PHONY: tools
 tools:
 	go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.2.0
